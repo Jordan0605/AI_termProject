@@ -3,15 +3,24 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <vector>
 
 using namespace std;
 
+struct S{
+  int score;
+  string s;
+};
+
+vector <S> v;
+string sequence[50];
+ifstream genome("genome.data");
+string content((istreambuf_iterator<char>(genome)),
+              (istreambuf_iterator<char>()));
+
 bool check(string str){
-  ifstream genome("genome.data");
   int count = 0;
   string tmp;
-  string content((istreambuf_iterator<char>(genome)),
-                (istreambuf_iterator<char>()));
   for(int i=0 ; i<content.length()-15 ; i++){
     tmp = content.substr(i, 15);
     if(tmp == str)
@@ -22,121 +31,125 @@ bool check(string str){
   return true;
 }
 
-bool compare(string str1, string str2, int mutation){
-  int count = 0;
-  for(int i=0 ; i<15 ; i++){
-    if(str1[i] != str2[i]){
-      count++;
-      if(count > mutation) return false;
-    }
-  }
-  return true;
+bool compare(S a, S b){
+  return a.score > b.score;
 }
 
-bool goalTest(string str, int p, string* sequence){
-  string pattern[50];
-  int pos[50];
-  bool success;
-  string tmp;
+int difference(string a, string b){
+  int count = 0;
+  for(int i=0 ; i<a.length() ; i++){
+    if(a[i] != b[i]) count++;
+  }
+  return count;
+}
 
-  pattern[0] = sequence[0].substr(p, 15);
-  pos[0] = p;
-
-  for(int seq=1 ; seq<50 ; seq++){
-    success = false;
-    for(int j=0 ; j<sequence[seq].length()-15 ; j++){
-      tmp = sequence[seq].substr(j, 15);
-      if(compare(str, tmp, 5)){
-        pattern[seq] = tmp;
-        pos[seq] = j;
-        success = true;
+int getScore(string s){
+  int result = 0;
+  for(int i=1 ; i<50 ; i++){
+    for(int j=0 ; j<sequence[i].length()-15 ; j++){
+      if(difference(s, sequence[i].substr(j, 15)) <= 5){
+        result++;
         break;
       }
     }
-    if(!success) break;
-    if(seq == 49 && check(str)){
-      cout << "Q2= " << str << endl;
-      for(int m=0 ; m<50 ; m++){
-        cout << "S" << m+1 << ":{(" << pattern[m] << "," << pos[m] << ")}";
-        if(m != 49) cout << ", ";
-      }
-      cout << endl;
-      return true;
-    }
   }
-  return false;
+  return result;
 }
 
-char change(char a){
-  string s = "ATCG";
-  return s[(s.find(a) + 1) % 4];
-}
+void printResult(string str){
+  string tmp;
+  int count;
 
-bool mutate(string origin, int pos, string* sequence){
-  string str = origin;
-
-  for(int i=0 ; i<15-4 ; i++){
-    for(int j=i+1 ; j<15-3 ; j++){
-      for(int k=j+1 ; k<15-2 ; k++){
-        for(int l=k+1 ; l<15-1 ; l++){
-          for(int m=l+1 ; m<15 ; m++){
-            //change 4 times each
-            for(int a=0 ; a<4 ; a++){
-              str[i] = change(str[i]);
-              for(int b=0 ; b<4 ; b++){
-                str[j] = change(str[j]);
-                for(int c=0 ; c<4 ; c++){
-                  str[k] = change(str[k]);
-                  for(int d=0 ; d<4 ; d++){
-                    str[l] = change(str[l]);
-                    for(int e=0 ; e<4 ; e++){
-                      str[m] = change(str[m]);
-                      if(goalTest(str, pos, sequence)) return true;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+  cout << "Q2 = " << str << endl;
+  for(int i=0 ; i<50 ; i++){
+    for(int j=0 ; j<sequence[i].length()-15 ; j++){
+      tmp = sequence[i].substr(j, 15);
+      count = 0;
+      for(int k=0 ; k<15 ; k++){
+        if(tmp[k] != str[k])
+          count++;
+      }
+      if(count <= 5){
+        cout << "S" << i+1 << "{(" << tmp << "," << j << ")}";
+        if(i != 49)
+          cout << ", ";
+        else
+          cout << endl;
+        break;
       }
     }
   }
-  /*debug*/
-  if(str != origin){
-    cerr << "error." << endl;
-    exit(-1);
-  }
-  return false;
 }
 
 void Q2(){
-  ifstream file("Q2.data");
-  string sequence[50];
-  string str;
-  string origin;
+  ifstream file("q2.data");
   int i = 0;
-  int turn = -1;
-  int part[4] = {249, 499, -1, 749};
-  bool success = false;
+  S tmp;
+  string mutate = "ATCG";
+  string str;
 
   while(!file.eof()){
     file >> sequence[i];
     i++;
   }
-  do{
-    turn++;
-    turn = turn % 4;
-    part[turn]++;
-    origin = sequence[0].substr(part[turn], 15);
-    success = mutate(origin, part[turn], sequence);
-    /*debug*/
-    if(part[2] > 250){
-      cerr << "error 2." << endl;
-      break;
-    }
-  }while(!success);
 
+  for(int j=0 ; j<sequence[0].length()-15 ; j++){
+    tmp.s = sequence[0].substr(j, 15);
+    tmp.score = getScore(tmp.s);
+    v.push_back(tmp);
+  }
+  sort(v.begin(), v.end(), compare);
+
+  //start from high score
+  for(int k=0 ; k<v.size() ; k++){
+    vector <char> c[15];
+    for(int l=0 ; l<15 ; l++){
+      str = v[k].s;
+      for(int m=0 ; m<4 ; m++){
+        str[l] = mutate[m];
+        if(getScore(str) >= v[k].score)
+          c[l].push_back(mutate[m]);
+      }
+    }
+    //compose candidate which may be answer
+    for(int n1=0;n1<c[0].size();n1++)
+      for(int n2=0;n2<c[1].size();n2++)
+        for(int n3=0;n3<c[2].size();n3++)
+          for(int n4=0;n4<c[3].size();n4++)
+            for(int n5=0;n5<c[4].size();n5++)
+              for(int n6=0;n6<c[5].size();n6++)
+                for(int n7=0;n7<c[6].size();n7++)
+                  for(int n8=0;n8<c[7].size();n8++)
+                    for(int n9=0;n9<c[8].size();n9++)
+                      for(int n10=0;n10<c[9].size();n10++)
+                        for(int n11=0;n11<c[10].size();n11++)
+                          for(int n12=0;n12<c[11].size();n12++)
+                            for(int n13=0;n13<c[12].size();n13++)
+                              for(int n14=0;n14<c[13].size();n14++)
+                                for(int n15=0;n15<c[14].size();n15++){
+                                  str = "";
+                                  str += c[0][n1];
+                                  str += c[1][n2];
+                                  str += c[2][n3];
+                                  str += c[3][n4];
+                                  str += c[4][n5];
+                                  str += c[5][n6];
+                                  str += c[6][n7];
+                                  str += c[7][n8];
+                                  str += c[8][n9];
+                                  str += c[9][n10];
+                                  str += c[10][n11];
+                                  str += c[11][n12];
+                                  str += c[12][n13];
+                                  str += c[13][n14];
+                                  str += c[14][n15];
+
+                                  if(getScore(str) == 49 && check(str)) {
+                                    printResult(str);
+                                    return;
+                                  }
+                                }
+  }
 }
 
 int main(){

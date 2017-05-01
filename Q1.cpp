@@ -23,7 +23,7 @@ bool check(string str){
 }
 
 void Q1(){
-  ifstream file("Q1.data");
+  ifstream file("q1.data");
   string sequence[50];
   int pos[50];
   int i = 0;

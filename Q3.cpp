@@ -111,7 +111,7 @@ bool mutate(string origin, int pos, string* sequence){
 }
 
 void Q3(){
-  ifstream file("Q3.data");
+  ifstream file("q3.data");
   string sequence[50];
   string str;
   string origin;
